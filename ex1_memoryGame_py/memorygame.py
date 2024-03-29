@@ -156,6 +156,14 @@ def main():
                     elif len(selected) == 1 and selected[0] == index:
                         # If the same card is clicked twice, keep it revealed
                         revealed[index] = True
+                elif reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
+                    # Reset the game
+                    revealed = [False] * (ROWS * COLS)
+                    selected = []
+                    matched = []
+                    random.shuffle(images)
+                    start_time = time.time()
+                    game_over = False
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
@@ -177,11 +185,9 @@ def main():
         if len(matched) == len(images):
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)  # Update reset text rectangle
-            pygame.display.update()
-            clock.tick(60)
-            continue  # Skip the rest of the loop to avoid displaying timer and updating display
-        reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)},
-                                       position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
+        else:
+            reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)},
+                                           position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
         pygame.display.update()
         clock.tick(60)
 
