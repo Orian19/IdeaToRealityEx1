@@ -6,10 +6,12 @@ import sys
 # Define colors
 WHITE = (255, 255, 255)
 GREEN = (144, 238, 144)
+RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 # Constants
 MAX_HINTS = 3  # Maximum number of hints per game
+
 
 def load_sound(file_path):
     try:
@@ -51,7 +53,7 @@ def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
     return text_rect2  # Return the rectangle of the reset text for click detection
 
 
-def check_match(selected, revealed, matched, images, match_sound, win_sound):
+def check_match(selected, revealed, matched, images, match_sound, win_sound, num_players, player_turn):
     if len(selected) == 2:
         if images[selected[0]] == images[selected[1]]:
             matched.extend(selected)
@@ -60,10 +62,15 @@ def check_match(selected, revealed, matched, images, match_sound, win_sound):
             # Hide the cards if they don't match
             revealed[selected[0]] = False
             revealed[selected[1]] = False
+
+        if num_players == 2 and images[selected[0]] != images[selected[1]]:
+            player_turn = 1 if player_turn == 2 else 2
         selected.clear()
 
     if len(matched) == len(images):
         win_sound.play()  # Play win sound when all matches are made
+
+    return player_turn
 
 
 def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
@@ -82,11 +89,12 @@ def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
     return button_rect  # Return the rectangle of the button for click detection
 
 
-def get_hint(revealed, matched, images):
-    unmatched_indices = [i for i, value in enumerate(revealed) if not value and i not in matched]
-    if unmatched_indices:
-        hint_index = random.choice(unmatched_indices)
-        return hint_index
+def get_hint(revealed, matched, images, num_players):
+    if num_players == 1:  # Check if the game is in 1 player mode
+        unmatched_indices = [i for i, value in enumerate(revealed) if not value and i not in matched]
+        if unmatched_indices:
+            hint_index = random.choice(unmatched_indices)
+            return hint_index
     return None
 
 
@@ -137,6 +145,36 @@ def main():
     # Load win sound
     win_sound = load_sound("win_sound.wav")  # Replace "win_sound.wav" with your sound file
 
+    # Display prompt for number of players
+    one_player_button_rect = pygame.Rect(100, 150, 200, 50)
+    two_players_button_rect = pygame.Rect(100, 250, 200, 50)
+
+    num_players = 0
+
+    while num_players == 0:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if one_player_button_rect.collidepoint(x, y):
+                    num_players = 1
+                elif two_players_button_rect.collidepoint(x, y):
+                    num_players = 2
+
+        WINDOW.fill(WHITE)
+        # Draw buttons
+        pygame.draw.rect(WINDOW, GREEN, one_player_button_rect)
+        pygame.draw.rect(WINDOW, GREEN, two_players_button_rect)
+
+        # Draw text on buttons
+        display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
+
+        pygame.display.update()
+
+    player_turn = 1  # Player 1 starts
+
     # Main game loop
     running = True
     game_over = False
@@ -163,7 +201,8 @@ def main():
                             draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
                             pygame.display.update()
                             time.sleep(1)
-                            check_match(selected, revealed, matched, images, match_sound, win_sound)
+                            player_turn = check_match(selected, revealed, matched, images, match_sound, win_sound,
+                                                      num_players, player_turn)
                     elif len(selected) == 1 and selected[0] == index:
                         # If the same card is clicked twice, keep it revealed
                         revealed[index] = True
@@ -181,7 +220,7 @@ def main():
                     # Check if the click was on the "Hint" button
                     hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
                     if hint_button_rect.collidepoint(x, y):
-                        hint_index = get_hint(revealed, matched, images)
+                        hint_index = get_hint(revealed, matched, images, num_players)
                         if hint_index is not None:
                             hints_remaining -= 1
                             pygame.time.set_timer(pygame.USEREVENT, 3000, True)  # Set a timer to hide the hint card
@@ -212,14 +251,24 @@ def main():
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)
         else:
-            reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)},
+            reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT,
+                                           position1={"bottomleft": (10, HEIGHT - 10)},
                                            position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
             # Display "Hint" button
             hint_text = f"Hints: {hints_remaining}"
             hint_surface = FONT.render(hint_text, True, BLACK)
             hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
-            pygame.draw.rect(WINDOW, GREEN, hint_rect)
+            if num_players == 2:
+                pygame.draw.rect(WINDOW, RED, hint_rect)
+            else:
+                pygame.draw.rect(WINDOW, GREEN, hint_rect)
             WINDOW.blit(hint_surface, hint_rect)
+
+            # Display player turn
+            player_turn_text = f"P{player_turn}"
+            player_turn_surface = FONT.render(player_turn_text, True, BLACK)
+            player_turn_rect = player_turn_surface.get_rect(midbottom=(WIDTH - 20, HEIGHT // 2))
+            WINDOW.blit(player_turn_surface, player_turn_rect)
 
         pygame.display.update()
         clock.tick(60)
