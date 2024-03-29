@@ -263,7 +263,10 @@ def main():
                 hint_index = None
 
         # Calculate elapsed time
-        elapsed_time = time_limit - (time.time() - start_time)
+        if time_attack:
+            elapsed_time = time_limit - (time.time() - start_time)
+        else:
+            elapsed_time = time.time() - start_time
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
