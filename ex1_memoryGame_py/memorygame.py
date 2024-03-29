@@ -8,6 +8,8 @@ WHITE = (255, 255, 255)
 GREEN = (144, 238, 144)
 BLACK = (0, 0, 0)
 
+# Constants
+MAX_HINTS = 3  # Maximum number of hints per game
 
 def load_sound(file_path):
     try:
@@ -18,7 +20,7 @@ def load_sound(file_path):
         return None
 
 
-def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP):
+def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index=None):
     WINDOW.fill(WHITE)
     for i in range(ROWS):
         for j in range(COLS):
@@ -26,14 +28,13 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
             if (i, j) in matched:
                 pygame.draw.rect(WINDOW, WHITE,
                                  (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP), CARD_WIDTH, CARD_HEIGHT))
-            elif revealed[index]:
-                # Display the actual image if revealed
+            elif revealed[index] or (hint_index is not None and index == hint_index):
+                # Display the actual image if revealed or if it's the hint card
                 image = pygame.transform.scale(images[index], (CARD_WIDTH, CARD_HEIGHT))
                 WINDOW.blit(image, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
             else:
                 # Display card back
-                card_back = pygame.image.load(
-                    "card_back.png")  # Replace "card_back.png" with the path to your card back image
+                card_back = pygame.image.load("card_back.png")
                 card_back = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
                 WINDOW.blit(card_back, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
 
@@ -81,6 +82,14 @@ def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
     return button_rect  # Return the rectangle of the button for click detection
 
 
+def get_hint(revealed, matched, images):
+    unmatched_indices = [i for i, value in enumerate(revealed) if not value and i not in matched]
+    if unmatched_indices:
+        hint_index = random.choice(unmatched_indices)
+        return hint_index
+    return None
+
+
 def main():
     # Initialize Pygame
     pygame.init()
@@ -120,6 +129,8 @@ def main():
     revealed = [False] * (ROWS * COLS)
     selected = []
     matched = []
+    hints_remaining = MAX_HINTS
+    hint_index = None
 
     # Load positive sound
     match_sound = load_sound("positive_sound.wav")  # Replace "positive_sound.wav" with your sound file
@@ -134,7 +145,7 @@ def main():
     # Start time
     start_time = time.time()
 
-    reset_text_rect = None  # Define reset text rectangle outside the loop
+    reset_text_rect = None
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -162,8 +173,18 @@ def main():
                     selected = []
                     matched = []
                     random.shuffle(images)
+                    hints_remaining = MAX_HINTS
+                    hint_index = None
                     start_time = time.time()
                     game_over = False
+                elif hints_remaining > 0:
+                    # Check if the click was on the "Hint" button
+                    hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
+                    if hint_button_rect.collidepoint(x, y):
+                        hint_index = get_hint(revealed, matched, images)
+                        if hint_index is not None:
+                            hints_remaining -= 1
+                            pygame.time.set_timer(pygame.USEREVENT, 3000, True)  # Set a timer to hide the hint card
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
@@ -172,8 +193,13 @@ def main():
                     selected = []
                     matched = []
                     random.shuffle(images)
+                    hints_remaining = MAX_HINTS
+                    hint_index = None
                     start_time = time.time()
                     game_over = False
+            elif event.type == pygame.USEREVENT:
+                # Timer event to hide the hint card
+                hint_index = None
 
         # Calculate elapsed time
         elapsed_time = time.time() - start_time
@@ -181,13 +207,20 @@ def main():
         seconds = int(elapsed_time % 60)
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
         if len(matched) == len(images):
             game_over = True
-            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)  # Update reset text rectangle
+            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)
         else:
             reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)},
                                            position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
+            # Display "Hint" button
+            hint_text = f"Hints: {hints_remaining}"
+            hint_surface = FONT.render(hint_text, True, BLACK)
+            hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
+            pygame.draw.rect(WINDOW, GREEN, hint_rect)
+            WINDOW.blit(hint_surface, hint_rect)
+
         pygame.display.update()
         clock.tick(60)
 
