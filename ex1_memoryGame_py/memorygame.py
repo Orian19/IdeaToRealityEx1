@@ -7,27 +7,32 @@ import sys
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+
 def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP):
     WINDOW.fill(WHITE)
     for i in range(ROWS):
         for j in range(COLS):
             index = i * COLS + j
             if (i, j) in matched:
-                pygame.draw.rect(WINDOW, WHITE, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP), CARD_WIDTH, CARD_HEIGHT))
+                pygame.draw.rect(WINDOW, WHITE,
+                                 (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP), CARD_WIDTH, CARD_HEIGHT))
             elif revealed[index]:
                 # Display the actual image if revealed
                 image = pygame.transform.scale(images[index], (CARD_WIDTH, CARD_HEIGHT))
                 WINDOW.blit(image, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
             else:
                 # Display card back
-                card_back = pygame.image.load("card_back.png")  # Replace "card_back.png" with the path to your card back image
+                card_back = pygame.image.load(
+                    "card_back.png")  # Replace "card_back.png" with the path to your card back image
                 card_back = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
                 WINDOW.blit(card_back, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
 
+
 def display_text(WINDOW, text, FONT, WIDTH, HEIGHT):
     text_surface = FONT.render(text, True, BLACK)
-    text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    text_rect = text_surface.get_rect(bottomleft=(10, HEIGHT - 10))  # Adjust the position here
     WINDOW.blit(text_surface, text_rect)
+
 
 def check_match(selected, revealed, matched, images):
     if len(selected) == 2:
@@ -38,6 +43,7 @@ def check_match(selected, revealed, matched, images):
             revealed[selected[0]] = False
             revealed[selected[1]] = False
         selected.clear()
+
 
 def main():
     # Initialize Pygame
@@ -84,6 +90,9 @@ def main():
     game_over = False
     clock = pygame.time.Clock()
 
+    # Start time
+    start_time = time.time()
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -97,12 +106,23 @@ def main():
                     revealed[index] = True
                     selected.append(index)
                     if len(selected) == 2:
+                        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
+                        pygame.display.update()
+                        time.sleep(1)
                         check_match(selected, revealed, matched, images)
                 elif len(selected) == 1 and selected[0] == index:
                     # If the same card is clicked twice, keep it revealed
                     revealed[index] = True
 
+        # Calculate elapsed time
+        elapsed_time = time.time() - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+        timer_text = f"Time: {minutes:02d}:{seconds:02d}"
+
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
+        display_text(WINDOW, timer_text, FONT, WIDTH, HEIGHT)
+
         if len(matched) == ROWS * COLS:
             display_text(WINDOW, "You Win!", FONT, WIDTH, HEIGHT)
             game_over = True
@@ -111,6 +131,7 @@ def main():
         clock.tick(60)
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
