@@ -5,6 +5,7 @@ import sys
 
 # Define colors
 WHITE = (255, 255, 255)
+GREEN = (144, 238, 144)
 BLACK = (0, 0, 0)
 
 
@@ -28,10 +29,14 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
                 WINDOW.blit(card_back, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
 
 
-def display_text(WINDOW, text, FONT, WIDTH, HEIGHT):
-    text_surface = FONT.render(text, True, BLACK)
-    text_rect = text_surface.get_rect(bottomleft=(10, HEIGHT - 10))  # Adjust the position here
-    WINDOW.blit(text_surface, text_rect)
+def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
+    text_surface1 = FONT.render(text1, True, color)
+    text_rect1 = text_surface1.get_rect(**position1)
+    WINDOW.blit(text_surface1, text_rect1)
+
+    text_surface2 = FONT.render(text2, True, color)
+    text_rect2 = text_surface2.get_rect(**position2)
+    WINDOW.blit(text_surface2, text_rect2)
 
 
 def check_match(selected, revealed, matched, images):
@@ -43,6 +48,20 @@ def check_match(selected, revealed, matched, images):
             revealed[selected[0]] = False
             revealed[selected[1]] = False
         selected.clear()
+
+
+def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
+    message = "Well Done!"
+    button_text = "Play Again"
+    message_surface = FONT.render(message, True, BLACK)
+    button_surface = FONT.render(button_text, True, BLACK)
+    message_rect = message_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+    button_rect = button_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+
+    pygame.draw.rect(WINDOW, GREEN, (WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2))
+    WINDOW.blit(message_surface, message_rect)
+    pygame.draw.rect(WINDOW, BLACK, button_rect, 2)
+    WINDOW.blit(button_surface, button_rect)
 
 
 def main():
@@ -121,11 +140,30 @@ def main():
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
-        display_text(WINDOW, timer_text, FONT, WIDTH, HEIGHT)
+        display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)}, position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
 
         if len(matched) == ROWS * COLS:
-            display_text(WINDOW, "You Win!", FONT, WIDTH, HEIGHT)
             game_over = True
+            while game_over:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                        game_over = False
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        x, y = pygame.mouse.get_pos()
+                        button_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
+                        if button_rect.collidepoint(x, y):
+                            # Reset the game
+                            revealed = [False] * (ROWS * COLS)
+                            selected = []
+                            matched = []
+                            random.shuffle(images)
+                            start_time = time.time()
+                            game_over = False
+
+                win_screen(WINDOW, FONT, WIDTH, HEIGHT)
+                pygame.display.update()
+                clock.tick(60)
 
         pygame.display.update()
         clock.tick(60)
