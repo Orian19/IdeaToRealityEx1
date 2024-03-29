@@ -9,6 +9,15 @@ GREEN = (144, 238, 144)
 BLACK = (0, 0, 0)
 
 
+def load_sound(file_path):
+    try:
+        sound = pygame.mixer.Sound(file_path)
+        return sound
+    except pygame.error as e:
+        print(f"Unable to load sound file: {file_path}")
+        return None
+
+
 def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP):
     WINDOW.fill(WHITE)
     for i in range(ROWS):
@@ -38,16 +47,22 @@ def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
     text_rect2 = text_surface2.get_rect(**position2)
     WINDOW.blit(text_surface2, text_rect2)
 
+    return text_rect2  # Return the rectangle of the reset text for click detection
 
-def check_match(selected, revealed, matched, images):
+
+def check_match(selected, revealed, matched, images, match_sound, win_sound):
     if len(selected) == 2:
         if images[selected[0]] == images[selected[1]]:
             matched.extend(selected)
+            match_sound.play()  # Play positive sound when a match is made
         else:
             # Hide the cards if they don't match
             revealed[selected[0]] = False
             revealed[selected[1]] = False
         selected.clear()
+
+    if len(matched) == len(images):
+        win_sound.play()  # Play win sound when all matches are made
 
 
 def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
@@ -62,6 +77,8 @@ def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
     WINDOW.blit(message_surface, message_rect)
     pygame.draw.rect(WINDOW, BLACK, button_rect, 2)
     WINDOW.blit(button_surface, button_rect)
+
+    return button_rect  # Return the rectangle of the button for click detection
 
 
 def main():
@@ -104,6 +121,11 @@ def main():
     selected = []
     matched = []
 
+    # Load positive sound
+    match_sound = load_sound("positive_sound.wav")  # Replace "positive_sound.wav" with your sound file
+    # Load win sound
+    win_sound = load_sound("win_sound.wav")  # Replace "win_sound.wav" with your sound file
+
     # Main game loop
     running = True
     game_over = False
@@ -112,6 +134,7 @@ def main():
     # Start time
     start_time = time.time()
 
+    reset_text_rect = None  # Define reset text rectangle outside the loop
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -120,18 +143,29 @@ def main():
                 x, y = pygame.mouse.get_pos()
                 col = x // (CARD_WIDTH + GAP)
                 row = y // (CARD_HEIGHT + GAP)
-                index = row * COLS + col
-                if not revealed[index] and len(selected) < 2:
-                    revealed[index] = True
-                    selected.append(index)
-                    if len(selected) == 2:
-                        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
-                        pygame.display.update()
-                        time.sleep(1)
-                        check_match(selected, revealed, matched, images)
-                elif len(selected) == 1 and selected[0] == index:
-                    # If the same card is clicked twice, keep it revealed
-                    revealed[index] = True
+                if col < COLS and row < ROWS:  # Check if the click is within the grid
+                    index = row * COLS + col
+                    if not revealed[index] and len(selected) < 2:
+                        revealed[index] = True
+                        selected.append(index)
+                        if len(selected) == 2:
+                            draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
+                            pygame.display.update()
+                            time.sleep(1)
+                            check_match(selected, revealed, matched, images, match_sound, win_sound)
+                    elif len(selected) == 1 and selected[0] == index:
+                        # If the same card is clicked twice, keep it revealed
+                        revealed[index] = True
+            elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
+                    # Reset the game
+                    revealed = [False] * (ROWS * COLS)
+                    selected = []
+                    matched = []
+                    random.shuffle(images)
+                    start_time = time.time()
+                    game_over = False
 
         # Calculate elapsed time
         elapsed_time = time.time() - start_time
@@ -140,31 +174,14 @@ def main():
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
-        display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)}, position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
-
-        if len(matched) == ROWS * COLS:
+        if len(matched) == len(images):
             game_over = True
-            while game_over:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                        game_over = False
-                    if event.type == pygame.MOUSEBUTTONDOWN:
-                        x, y = pygame.mouse.get_pos()
-                        button_rect = pygame.Rect(WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2)
-                        if button_rect.collidepoint(x, y):
-                            # Reset the game
-                            revealed = [False] * (ROWS * COLS)
-                            selected = []
-                            matched = []
-                            random.shuffle(images)
-                            start_time = time.time()
-                            game_over = False
-
-                win_screen(WINDOW, FONT, WIDTH, HEIGHT)
-                pygame.display.update()
-                clock.tick(60)
-
+            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)  # Update reset text rectangle
+            pygame.display.update()
+            clock.tick(60)
+            continue  # Skip the rest of the loop to avoid displaying timer and updating display
+        reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT, position1={"bottomleft": (10, HEIGHT - 10)},
+                                       position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
         pygame.display.update()
         clock.tick(60)
 
