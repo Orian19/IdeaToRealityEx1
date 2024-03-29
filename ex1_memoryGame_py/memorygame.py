@@ -11,6 +11,8 @@ BLACK = (0, 0, 0)
 
 # Constants
 MAX_HINTS = 3  # Maximum number of hints per game
+INITIAL_TIME_LIMIT = 60  # Initial time limit for Time Attack mode in seconds
+TIME_LIMIT_DECREMENT = 10  # Time limit decrement for each subsequent game in Time Attack mode
 
 
 def load_sound(file_path):
@@ -73,18 +75,31 @@ def check_match(selected, revealed, matched, images, match_sound, win_sound, num
     return player_turn
 
 
-def win_screen(WINDOW, FONT, WIDTH, HEIGHT):
-    message = "Well Done!"
-    button_text = "Play Again"
-    message_surface = FONT.render(message, True, BLACK)
-    button_surface = FONT.render(button_text, True, BLACK)
-    message_rect = message_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
-    button_rect = button_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+def win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner):
+    if winner:
+        message = "Well Done!"
+        button_text = "Play Again"
+        message_surface = FONT.render(message, True, BLACK)
+        button_surface = FONT.render(button_text, True, BLACK)
+        message_rect = message_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        button_rect = button_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
 
-    pygame.draw.rect(WINDOW, GREEN, (WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2))
-    WINDOW.blit(message_surface, message_rect)
-    pygame.draw.rect(WINDOW, BLACK, button_rect, 2)
-    WINDOW.blit(button_surface, button_rect)
+        pygame.draw.rect(WINDOW, GREEN, (WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2))
+        WINDOW.blit(message_surface, message_rect)
+        pygame.draw.rect(WINDOW, BLACK, button_rect, 2)
+        WINDOW.blit(button_surface, button_rect)
+    else:
+        message = "Game Over!"
+        button_text = "Try Again"
+        message_surface = FONT.render(message, True, BLACK)
+        button_surface = FONT.render(button_text, True, BLACK)
+        message_rect = message_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        button_rect = button_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+
+        pygame.draw.rect(WINDOW, RED, (WIDTH // 4, HEIGHT // 4, WIDTH // 2, HEIGHT // 2))
+        WINDOW.blit(message_surface, message_rect)
+        pygame.draw.rect(WINDOW, BLACK, button_rect, 2)
+        WINDOW.blit(button_surface, button_rect)
 
     return button_rect  # Return the rectangle of the button for click detection
 
@@ -148,10 +163,13 @@ def main():
     # Display prompt for number of players
     one_player_button_rect = pygame.Rect(100, 150, 200, 50)
     two_players_button_rect = pygame.Rect(100, 250, 200, 50)
+    time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
 
     num_players = 0
+    time_attack = False
+    time_limit = INITIAL_TIME_LIMIT
 
-    while num_players == 0:
+    while num_players == 0 and not time_attack:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -162,14 +180,18 @@ def main():
                     num_players = 1
                 elif two_players_button_rect.collidepoint(x, y):
                     num_players = 2
+                elif time_attack_button_rect.collidepoint(x, y):
+                    time_attack = True
 
         WINDOW.fill(WHITE)
         # Draw buttons
         pygame.draw.rect(WINDOW, GREEN, one_player_button_rect)
         pygame.draw.rect(WINDOW, GREEN, two_players_button_rect)
+        pygame.draw.rect(WINDOW, GREEN, time_attack_button_rect)
 
         # Draw text on buttons
         display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
+        display_text(WINDOW, "Time Attack", "", FONT, {"center": (200, 100)}, {"center": (200, 100)})
 
         pygame.display.update()
 
@@ -241,15 +263,30 @@ def main():
                 hint_index = None
 
         # Calculate elapsed time
-        elapsed_time = time.time() - start_time
+        elapsed_time = time_limit - (time.time() - start_time)
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
-        if len(matched) == len(images):
+        if elapsed_time <= 0:
             game_over = True
-            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT)
+            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=False)
+        elif len(matched) == len(images):
+            game_over = True
+            reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=True)
+            # Decrement time limit for Time Attack mode
+            if time_attack:
+                time_limit -= TIME_LIMIT_DECREMENT
+                # Reset the game for the next round with reduced time limit
+                revealed = [False] * (ROWS * COLS)
+                selected = []
+                matched = []
+                random.shuffle(images)
+                hints_remaining = MAX_HINTS
+                hint_index = None
+                start_time = time.time()
+                game_over = False
         else:
             reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT,
                                            position1={"bottomleft": (10, HEIGHT - 10)},
