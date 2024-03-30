@@ -2,6 +2,9 @@ import pygame
 import random
 import time
 import sys
+from vosk import Model, KaldiRecognizer
+import pyaudio
+import json
 
 # Define colors
 WHITE = (255, 255, 255)
@@ -13,6 +16,42 @@ BLACK = (0, 0, 0)
 MAX_HINTS = 3  # Maximum number of hints per game
 INITIAL_TIME_LIMIT = 60  # Initial time limit for Time Attack mode in seconds
 TIME_LIMIT_DECREMENT = 10  # Time limit decrement for each subsequent game in Time Attack mode
+VOICE_MODEL = "vosk-model-small-en-us-0.15"
+
+
+def text_to_index(text):
+    num_dict = {
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+        "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+        "sixteen": 16
+    }
+
+    parts = text.split()
+    if len(parts) > 1 and parts[0] == "number":
+        return num_dict.get(parts[1].lower(), "Number not recognized")
+    return "Format not recognized"
+
+
+def speech_recognition():
+    model = Model(VOICE_MODEL)
+    recognizer = KaldiRecognizer(model, 16000)
+    recognizer.SetWords(True)
+
+    mic = pyaudio.PyAudio()
+    stream = mic.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+    stream.start_stream()
+
+    while True:
+        data = stream.read(4096)
+        if recognizer.AcceptWaveform(data):
+            text = recognizer.Result()
+            print(text)
+            index = json.loads(text)
+            index = text_to_index(index["text"])
+
+            if isinstance(index, int):
+                return index-1
 
 
 def load_sound(file_path):
@@ -204,12 +243,14 @@ def main():
     one_player_button_rect = pygame.Rect(100, 150, 200, 50)
     two_players_button_rect = pygame.Rect(100, 250, 200, 50)
     time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
+    voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
 
     num_players = 0
     time_attack = False
+    voice_control = False
     time_limit = INITIAL_TIME_LIMIT
 
-    while num_players == 0 and not time_attack:
+    while num_players == 0 and not time_attack and not voice_control:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -222,16 +263,20 @@ def main():
                     num_players = 2
                 elif time_attack_button_rect.collidepoint(x, y):
                     time_attack = True
+                elif voice_control_button_rect.collidepoint(x, y):
+                    voice_control = True
 
         WINDOW.fill(WHITE)
         # Draw buttons
         pygame.draw.rect(WINDOW, GREEN, one_player_button_rect)
         pygame.draw.rect(WINDOW, GREEN, two_players_button_rect)
         pygame.draw.rect(WINDOW, GREEN, time_attack_button_rect)
+        pygame.draw.rect(WINDOW, GREEN, voice_control_button_rect)
 
         # Draw text on buttons
         display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
         display_text(WINDOW, "Time Attack", "", FONT, {"center": (200, 100)}, {"center": (200, 100)})
+        display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
 
         pygame.display.update()
 
@@ -250,12 +295,17 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if not game_over and event.type == pygame.MOUSEBUTTONDOWN:
+            if voice_control:
+                voice_index = speech_recognition()
+            if not game_over and event.type == pygame.MOUSEBUTTONDOWN or voice_control:
                 x, y = pygame.mouse.get_pos()
                 col = x // (CARD_WIDTH + GAP)
                 row = y // (CARD_HEIGHT + GAP)
-                if col < COLS and row < ROWS:  # Check if the click is within the grid
-                    index = row * COLS + col
+                if col < COLS and row < ROWS or voice_index:  # Check if the click is within the grid
+                    if voice_index:
+                        index = voice_index
+                    else:
+                        index = row * COLS + col
                     if not revealed[index] and len(selected) < 2:
                         flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
                                             index, card_back)
@@ -346,7 +396,7 @@ def main():
             hint_text = f"Hints: {hints_remaining}"
             hint_surface = FONT.render(hint_text, True, BLACK)
             hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
-            if num_players == 2 or time_attack:
+            if num_players == 2 or time_attack or voice_control:
                 pygame.draw.rect(WINDOW, RED, hint_rect)
             else:
                 pygame.draw.rect(WINDOW, GREEN, hint_rect)
