@@ -20,6 +20,11 @@ VOICE_MODEL = "vosk-model-small-en-us-0.15"
 
 
 def text_to_index(text):
+    """
+    convert text audio to card index in the game
+    :param text: audio text
+    :return:
+    """
     num_dict = {
         "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
@@ -34,6 +39,10 @@ def text_to_index(text):
 
 
 def speech_recognition():
+    """
+    voice control using VOSK
+    :return: card index of what the user said
+    """
     model = Model(VOICE_MODEL)
     recognizer = KaldiRecognizer(model, 16000)
     recognizer.SetWords(True)
@@ -55,6 +64,11 @@ def speech_recognition():
 
 
 def load_sound(file_path):
+    """
+    load game sounds
+    :param file_path:
+    :return: sound
+    """
     try:
         sound = pygame.mixer.Sound(file_path)
         return sound
@@ -64,6 +78,22 @@ def load_sound(file_path):
 
 
 def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None, card_back=None):
+    """
+    board drawing and updates for the game play
+    :param WINDOW:
+    :param images: card images
+    :param revealed: cards that have already been revealed by the player
+    :param matched: matching pair
+    :param ROWS:
+    :param COLS:
+    :param CARD_WIDTH:
+    :param CARD_HEIGHT:
+    :param GAP:
+    :param flip_animation:
+    :param card_back:
+    :return:
+    """
+
     WINDOW.fill(WHITE)
     if card_back is None:
         card_back = pygame.image.load("card_back.png")
@@ -97,6 +127,22 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
 
 
 def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back, hint=False):
+    """
+    flipping card anmation for when a card is to be revealed to the player
+    :param WINDOW:
+    :param images:
+    :param revealed:
+    :param matched:
+    :param ROWS:
+    :param COLS:
+    :param CARD_WIDTH:
+    :param CARD_HEIGHT:
+    :param GAP:
+    :param index:
+    :param card_back:
+    :param hint:
+    :return:
+    """
     # First phase: shrinking the card to the middle
     for width in range(CARD_WIDTH, 0, -10):
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "hiding"}, card_back=card_back)
@@ -122,6 +168,17 @@ def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDT
 
 
 def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
+    """
+    helper function to display text
+    :param WINDOW:
+    :param text1:
+    :param text2:
+    :param FONT:
+    :param position1:
+    :param position2:
+    :param color:
+    :return:
+    """
     text_surface1 = FONT.render(text1, True, color)
     text_rect1 = text_surface1.get_rect(**position1)
     WINDOW.blit(text_surface1, text_rect1)
@@ -134,6 +191,18 @@ def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
 
 
 def check_match(selected, revealed, matched, images, match_sound, win_sound, num_players, player_turn):
+    """
+    logic function to check if a pair of cards is matched
+    :param selected:
+    :param revealed:
+    :param matched:
+    :param images:
+    :param match_sound:
+    :param win_sound:
+    :param num_players:
+    :param player_turn:
+    :return:
+    """
     if len(selected) == 2:
         if images[selected[0]] == images[selected[1]]:
             matched.extend(selected)
@@ -154,6 +223,15 @@ def check_match(selected, revealed, matched, images, match_sound, win_sound, num
 
 
 def win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner):
+    """
+    a window for when the player wins or losses the game which includes a play again option or game over
+    :param WINDOW:
+    :param FONT:
+    :param WIDTH:
+    :param HEIGHT:
+    :param winner:
+    :return:
+    """
     if winner:
         message = "Well Done!"
         button_text = "Play Again"
@@ -183,6 +261,14 @@ def win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner):
 
 
 def get_hint(revealed, matched, images, num_players):
+    """
+    helper function to get a random index of a card to be revealed (shortly) for a hint
+    :param revealed:
+    :param matched:
+    :param images:
+    :param num_players:
+    :return:
+    """
     if num_players == 1:  # Check if the game is in 1 player mode
         unmatched_indices = [i for i, value in enumerate(revealed) if not value and i not in matched]
         if unmatched_indices:
