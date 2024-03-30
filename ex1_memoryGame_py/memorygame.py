@@ -56,6 +56,7 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
                     card_back_scaled = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
                     WINDOW.blit(card_back_scaled, (x, y))
 
+
 def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back):
     # First phase: shrinking the card to the middle
     for width in range(CARD_WIDTH, 0, -10):
@@ -164,6 +165,7 @@ def main():
         pygame.image.load("image7.png"),  # Replace "image7.png" with the path to your image file
         pygame.image.load("image8.png"),  # Replace "image8.png" with the path to your image file
     ]
+    card_back = pygame.image.load("card_back.png")
 
     # Duplicate images to create pairs
     images *= 2
@@ -248,7 +250,6 @@ def main():
                 if col < COLS and row < ROWS:  # Check if the click is within the grid
                     index = row * COLS + col
                     if not revealed[index] and len(selected) < 2:
-                        card_back = pygame.image.load("card_back.png")
                         flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
                                             index, card_back)
                         revealed[index] = True
@@ -305,7 +306,10 @@ def main():
         seconds = int(elapsed_time % 60)
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                   flip_animation={"index": hint_index, "width": CARD_WIDTH, "phase": "hiding"}, card_back=card_back)
+
+        # draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
         if elapsed_time < 0:
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=False)
@@ -332,7 +336,7 @@ def main():
             hint_text = f"Hints: {hints_remaining}"
             hint_surface = FONT.render(hint_text, True, BLACK)
             hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
-            if num_players == 2:
+            if num_players == 2 or time_attack:
                 pygame.draw.rect(WINDOW, RED, hint_rect)
             else:
                 pygame.draw.rect(WINDOW, GREEN, hint_rect)
