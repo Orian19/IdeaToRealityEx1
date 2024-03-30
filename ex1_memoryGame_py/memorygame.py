@@ -24,9 +24,10 @@ def load_sound(file_path):
         return None
 
 
-def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None):
+def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None, card_back=None):
     WINDOW.fill(WHITE)
-    card_back = pygame.image.load("card_back.png")
+    if card_back is None:
+        card_back = pygame.image.load("card_back.png")
     for i in range(ROWS):
         for j in range(COLS):
             index = i * COLS + j
@@ -40,21 +41,37 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
                     if flip_animation and flip_animation["index"] == index:
                         width = flip_animation["width"]
                         x += (CARD_WIDTH - width) / 2  # Center the animating card
+                        if flip_animation["phase"] == "hiding":
+                            # Show card back shrinking
+                            img = pygame.transform.scale(card_back, (width, CARD_HEIGHT))
+                        else:
+                            # Show card face expanding
+                            img = pygame.transform.scale(images[index], (width, CARD_HEIGHT))
                     else:
                         width = CARD_WIDTH
-
-                    image = pygame.transform.scale(images[index], (width, CARD_HEIGHT))
-                    WINDOW.blit(image, (x, y))
+                        img = pygame.transform.scale(images[index], (width, CARD_HEIGHT))
+                    WINDOW.blit(img, (x, y))
                 else:
                     # Display card back
                     card_back_scaled = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
                     WINDOW.blit(card_back_scaled, (x, y))
 
-def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index):
-    for width in list(range(CARD_WIDTH, 0, -10)) + list(range(0, CARD_WIDTH + 1, 10)):
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, {"index": index, "width": width})
+def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back):
+    # First phase: shrinking the card to the middle
+    for width in range(CARD_WIDTH, 0, -10):
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "hiding"}, card_back=card_back)
         pygame.display.update()
-        pygame.time.wait(25)  # Control the speed of the animation
+        pygame.time.wait(25)
+
+    # Swap from the card back to the card face here if necessary
+    if not revealed[index]:
+        revealed[index] = True  # This ensures that the card face is shown in the expanding phase
+
+    # Second phase: expanding the card from the middle to full width
+    for width in range(0, CARD_WIDTH + 1, 10):
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
+        pygame.display.update()
+        pygame.time.wait(25)
 
 
 def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
@@ -231,8 +248,9 @@ def main():
                 if col < COLS and row < ROWS:  # Check if the click is within the grid
                     index = row * COLS + col
                     if not revealed[index] and len(selected) < 2:
+                        card_back = pygame.image.load("card_back.png")
                         flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
-                                            index)
+                                            index, card_back)
                         revealed[index] = True
                         selected.append(index)
                         if len(selected) == 2:
