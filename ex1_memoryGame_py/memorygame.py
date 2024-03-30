@@ -57,7 +57,7 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
                     WINDOW.blit(card_back_scaled, (x, y))
 
 
-def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back):
+def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back, hint=False):
     # First phase: shrinking the card to the middle
     for width in range(CARD_WIDTH, 0, -10):
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "hiding"}, card_back=card_back)
@@ -70,6 +70,13 @@ def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDT
 
     # Second phase: expanding the card from the middle to full width
     for width in range(0, CARD_WIDTH + 1, 10):
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
+        pygame.display.update()
+        pygame.time.wait(25)
+
+    # close card shortly after revealed if hint
+    if hint:
+        revealed[index] = False
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
         pygame.display.update()
         pygame.time.wait(25)
@@ -281,6 +288,9 @@ def main():
                         if hint_index is not None:
                             hints_remaining -= 1
                             pygame.time.set_timer(pygame.USEREVENT, 3000, True)  # Set a timer to hide the hint card
+                            flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT,
+                                                GAP,
+                                                hint_index, card_back, True)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
