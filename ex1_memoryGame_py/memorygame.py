@@ -24,23 +24,37 @@ def load_sound(file_path):
         return None
 
 
-def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index=None):
+def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None):
     WINDOW.fill(WHITE)
+    card_back = pygame.image.load("card_back.png")
     for i in range(ROWS):
         for j in range(COLS):
             index = i * COLS + j
+            x = j * (CARD_WIDTH + GAP)
+            y = i * (CARD_HEIGHT + GAP)
+
             if (i, j) in matched:
-                pygame.draw.rect(WINDOW, WHITE,
-                                 (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP), CARD_WIDTH, CARD_HEIGHT))
-            elif revealed[index] or (hint_index is not None and index == hint_index):
-                # Display the actual image if revealed or if it's the hint card
-                image = pygame.transform.scale(images[index], (CARD_WIDTH, CARD_HEIGHT))
-                WINDOW.blit(image, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
+                pygame.draw.rect(WINDOW, WHITE, (x, y, CARD_WIDTH, CARD_HEIGHT))
             else:
-                # Display card back
-                card_back = pygame.image.load("card_back.png")
-                card_back = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
-                WINDOW.blit(card_back, (j * (CARD_WIDTH + GAP), i * (CARD_HEIGHT + GAP)))
+                if revealed[index] or (flip_animation and flip_animation["index"] == index):
+                    if flip_animation and flip_animation["index"] == index:
+                        width = flip_animation["width"]
+                        x += (CARD_WIDTH - width) / 2  # Center the animating card
+                    else:
+                        width = CARD_WIDTH
+
+                    image = pygame.transform.scale(images[index], (width, CARD_HEIGHT))
+                    WINDOW.blit(image, (x, y))
+                else:
+                    # Display card back
+                    card_back_scaled = pygame.transform.scale(card_back, (CARD_WIDTH, CARD_HEIGHT))
+                    WINDOW.blit(card_back_scaled, (x, y))
+
+def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index):
+    for width in list(range(CARD_WIDTH, 0, -10)) + list(range(0, CARD_WIDTH + 1, 10)):
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, {"index": index, "width": width})
+        pygame.display.update()
+        pygame.time.wait(25)  # Control the speed of the animation
 
 
 def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
@@ -217,6 +231,8 @@ def main():
                 if col < COLS and row < ROWS:  # Check if the click is within the grid
                     index = row * COLS + col
                     if not revealed[index] and len(selected) < 2:
+                        flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                                            index)
                         revealed[index] = True
                         selected.append(index)
                         if len(selected) == 2:
@@ -272,7 +288,7 @@ def main():
         timer_text = f"Time: {minutes:02d}:{seconds:02d}"
 
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
-        if elapsed_time <= 0:
+        if elapsed_time < 0:
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=False)
         elif len(matched) == len(images):
