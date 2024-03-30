@@ -46,8 +46,8 @@ def speech_recognition():
         data = stream.read(4096)
         if recognizer.AcceptWaveform(data):
             text = recognizer.Result()
-            print(text)
             index = json.loads(text)
+            print(index["text"])
             index = text_to_index(index["text"])
 
             if isinstance(index, int):
@@ -196,7 +196,7 @@ def main():
     pygame.init()
 
     # Set up display
-    WIDTH, HEIGHT = 400, 400
+    WIDTH, HEIGHT = 400, 450
     WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Memory Game")
 
@@ -289,7 +289,7 @@ def main():
 
     # Start time
     start_time = time.time()
-
+    voice_index = None
     reset_text_rect = None
     while running:
         for event in pygame.event.get():
@@ -392,6 +392,16 @@ def main():
             reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT,
                                            position1={"bottomleft": (10, HEIGHT - 10)},
                                            position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
+
+            if voice_control:
+                small_font_size = 25
+                small_font = pygame.font.Font(None, small_font_size)  # Create a new Font object for the smaller text
+
+                info_text = "Say 'number' followed by the card number (1-16)"
+                info_text_surface = small_font.render(info_text, True, BLACK)
+                info_text_rect = info_text_surface.get_rect(midbottom=(WIDTH - 196, HEIGHT - 60))
+                WINDOW.blit(info_text_surface, info_text_rect)
+
             # Display "Hint" button
             hint_text = f"Hints: {hints_remaining}"
             hint_surface = FONT.render(hint_text, True, BLACK)
