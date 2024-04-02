@@ -13,9 +13,16 @@ RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 # Constants
+WIDTH, HEIGHT = 400, 450  # game screen size
+
+CARD_WIDTH, CARD_HEIGHT = 80, 80  # Define card properties
+GAP = 10 # between cards
+ROWS, COLS = 4, 4  # cards arrangement
+
 MAX_HINTS = 3  # Maximum number of hints per game
 INITIAL_TIME_LIMIT = 60  # Initial time limit for Time Attack mode in seconds
 TIME_LIMIT_DECREMENT = 10  # Time limit decrement for each subsequent game in Time Attack mode
+
 VOICE_MODEL = "vosk-model-small-en-us-0.15"
 
 
@@ -198,7 +205,7 @@ def display_text(WINDOW, text1, text2, FONT, position1, position2, color=BLACK):
     text_rect2 = text_surface2.get_rect(**position2)
     WINDOW.blit(text_surface2, text_rect2)
 
-    return text_rect2  # Return the rectangle of the reset text for click detection
+    return text_rect2
 
 
 def check_match(selected, revealed, matched, images, match_sound, win_sound, num_players, player_turn):
@@ -271,12 +278,11 @@ def win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner):
     return button_rect  # Return the rectangle of the button for click detection
 
 
-def get_hint(revealed, matched, images, num_players):
+def get_hint(revealed, matched, num_players):
     """
-    helper function to get a random index of a card to be revealed (shortly) for a hint
+    helper function to get a random index of a card to be revealed (shortly) for a hint (only for 1 player)
     :param revealed:
     :param matched:
-    :param images:
     :param num_players:
     :return:
     """
@@ -288,16 +294,12 @@ def get_hint(revealed, matched, images, num_players):
     return None
 
 
-def main():
-    # Initialize Pygame
-    pygame.init()
-
-    # Set up display
-    WIDTH, HEIGHT = 400, 450
-    WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Memory Game")
-
-    # Load images
+def load_card_images(pygame):
+    """
+    load images for the game
+    :param pygame:
+    :return:
+    """
     images = [
         pygame.image.load("image1.png"),  # Replace "image1.png" with the path to your image file
         pygame.image.load("image2.png"),  # Replace "image2.png" with the path to your image file
@@ -310,16 +312,25 @@ def main():
     ]
     card_back = pygame.image.load("card_back.png")
 
+    return images, card_back
+
+
+def main():
+    # Initialize Pygame
+    pygame.init()
+
+    # Set up display
+    WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Memory Game")
+
+    # Load images
+    images, card_back = load_card_images(pygame)
+
     # Duplicate images to create pairs
     images *= 2
 
     # Shuffle images
     random.shuffle(images)
-
-    # Define card properties
-    CARD_WIDTH, CARD_HEIGHT = 80, 80
-    GAP = 10
-    ROWS, COLS = 4, 4
 
     # Define font
     FONT = pygame.font.SysFont(None, 40)
@@ -332,9 +343,9 @@ def main():
     hint_index = None
 
     # Load positive sound
-    match_sound = load_sound("positive_sound.wav")  # Replace "positive_sound.wav" with your sound file
+    match_sound = load_sound("positive_sound.wav")
     # Load win sound
-    win_sound = load_sound("win_sound.wav")  # Replace "win_sound.wav" with your sound file
+    win_sound = load_sound("win_sound.wav")  
 
     # Display prompt for number of players
     one_player_button_rect = pygame.Rect(100, 150, 200, 50)
