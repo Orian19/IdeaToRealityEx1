@@ -309,6 +309,7 @@ def hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_b
             flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
                                 hint_index, card_back, True)
 
+    return hints_remaining
 
 def card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images, card_back,
                               num_players, player_turn, match_sound, win_sound):
@@ -491,7 +492,8 @@ def main():
                     game_over = False
                     player_turn = 1  # reset player turn (for 2 player mode)
                 elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
-                    hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_back, hints_remaining)
+                    hints_remaining = hint_processing(WINDOW, x, y, revealed, matched, num_players,
+                                                      images, card_back, hints_remaining)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
