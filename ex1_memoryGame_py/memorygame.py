@@ -16,7 +16,7 @@ BLACK = (0, 0, 0)
 WIDTH, HEIGHT = 400, 450  # game screen size
 
 CARD_WIDTH, CARD_HEIGHT = 80, 80  # Define card properties
-GAP = 10 # between cards
+GAP = 10  # between cards
 ROWS, COLS = 4, 4  # cards arrangement
 
 MAX_HINTS = 3  # Maximum number of hints per game
@@ -294,6 +294,22 @@ def get_hint(revealed, matched, num_players):
     return None
 
 
+def hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_back, hints_remaining):
+    """
+    handle hint processing. revealing a card for a short amount of time
+    :return:
+    """
+    # Check if the click was on the "Hint" button
+    hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
+    if hint_button_rect.collidepoint(x, y):
+        hint_index = get_hint(revealed, matched, num_players)
+        if hint_index is not None:
+            hints_remaining -= 1
+            pygame.time.set_timer(pygame.USEREVENT, 3000, True)
+            flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                                hint_index, card_back, True)
+
+
 def card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images, card_back,
                               num_players, player_turn, match_sound, win_sound):
     """
@@ -370,7 +386,6 @@ def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
     display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
     display_text(WINDOW, "Time Attack", "", FONT, {"center": (200, 100)}, {"center": (200, 100)})
     display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
-
 
 
 def main():
@@ -461,30 +476,22 @@ def main():
                 col = x // (CARD_WIDTH + GAP)
                 row = y // (CARD_HEIGHT + GAP)
                 if col < COLS and row < ROWS or voice_index:  # Check if the click is within the grid
-                    player_turn = card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images,
-                                              card_back, num_players, player_turn, match_sound, win_sound)
+                    player_turn = card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched,
+                                                            images,
+                                                            card_back, num_players, player_turn, match_sound, win_sound)
                 elif reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
                     # Reset the game
                     revealed = [False] * (ROWS * COLS)
                     selected = []
                     matched = []
-                    random.shuffle(images)
-                    hints_remaining = MAX_HINTS
+                    random.shuffle(images)  # reshuffle the cards
+                    hints_remaining = MAX_HINTS  # reset hints
                     hint_index = None
-                    start_time = time.time()
+                    start_time = time.time()  # reset time
                     game_over = False
-                    player_turn = 1
+                    player_turn = 1  # reset player turn (for 2 player mode)
                 elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
-                    # Check if the click was on the "Hint" button
-                    hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
-                    if hint_button_rect.collidepoint(x, y):
-                        hint_index = get_hint(revealed, matched, num_players)
-                        if hint_index is not None:
-                            hints_remaining -= 1
-                            pygame.time.set_timer(pygame.USEREVENT, 3000, True)  # Set a timer to hide the hint card
-                            flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT,
-                                                GAP,
-                                                hint_index, card_back, True)
+                    hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_back, hints_remaining)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
