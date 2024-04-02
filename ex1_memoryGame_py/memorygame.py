@@ -389,6 +389,24 @@ def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
     display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
 
 
+def game_reset(revealed, selected, matched, images, hints_remaining, hint_index, start_time, game_over, player_turn):
+    """
+    reset all game parameters for a new game
+    :return:
+    """
+    revealed = [False] * (ROWS * COLS)
+    selected = []
+    matched = []
+    random.shuffle(images)  # reshuffle the cards
+    hints_remaining = MAX_HINTS  # reset hints
+    hint_index = None
+    start_time = time.time()  # reset time
+    game_over = False
+    player_turn = 1  # reset player turn (for 2 player mode)
+
+    return revealed, selected, matched, hints_remaining, hint_index, start_time, game_over, player_turn
+
+
 def main():
     # Initialize Pygame
     pygame.init()
@@ -462,10 +480,11 @@ def main():
     game_over = False
     clock = pygame.time.Clock()
 
-    # Start time
-    start_time = time.time()
+    start_time = time.time()  # Start time
     voice_index = None
     reset_text_rect = None
+
+    # game loop
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -481,31 +500,20 @@ def main():
                                                             images,
                                                             card_back, num_players, player_turn, match_sound, win_sound)
                 elif reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
-                    # Reset the game
-                    revealed = [False] * (ROWS * COLS)
-                    selected = []
-                    matched = []
-                    random.shuffle(images)  # reshuffle the cards
-                    hints_remaining = MAX_HINTS  # reset hints
-                    hint_index = None
-                    start_time = time.time()  # reset time
-                    game_over = False
-                    player_turn = 1  # reset player turn (for 2 player mode)
+                    (revealed, selected, matched, hints_remaining, hint_index,
+                     start_time, game_over, player_turn) = (
+                        game_reset(revealed, selected, matched, images, hints_remaining,
+                                   hint_index, start_time, game_over, player_turn))
                 elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
                     hints_remaining = hint_processing(WINDOW, x, y, revealed, matched, num_players,
                                                       images, card_back, hints_remaining)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
-                    # Reset the game
-                    revealed = [False] * (ROWS * COLS)
-                    selected = []
-                    matched = []
-                    random.shuffle(images)
-                    hints_remaining = MAX_HINTS
-                    hint_index = None
-                    start_time = time.time()
-                    game_over = False
+                    (revealed, selected, matched, hints_remaining, hint_index,
+                     start_time, game_over, player_turn) = (
+                        game_reset(revealed, selected, matched, images, hints_remaining,
+                                   hint_index, start_time, game_over, player_turn))
             elif event.type == pygame.USEREVENT:
                 # Timer event to hide the hint card
                 hint_index = None
