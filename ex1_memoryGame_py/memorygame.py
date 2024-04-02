@@ -315,6 +315,23 @@ def load_card_images(pygame):
     return images, card_back
 
 
+def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
+    """
+    drae the buttons which will appear on the main window of the game
+    :param pygame:
+    :return:
+    """
+    # Draw buttons
+    for rect in rect_list:
+        pygame.draw.rect(WINDOW, GREEN, rect)
+
+    # Draw text on buttons
+    display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
+    display_text(WINDOW, "Time Attack", "", FONT, {"center": (200, 100)}, {"center": (200, 100)})
+    display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
+
+
+
 def main():
     # Initialize Pygame
     pygame.init()
@@ -345,19 +362,21 @@ def main():
     # Load positive sound
     match_sound = load_sound("positive_sound.wav")
     # Load win sound
-    win_sound = load_sound("win_sound.wav")  
+    win_sound = load_sound("win_sound.wav")
 
-    # Display prompt for number of players
+    # Display window for game modes
     one_player_button_rect = pygame.Rect(100, 150, 200, 50)
     two_players_button_rect = pygame.Rect(100, 250, 200, 50)
     time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
     voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
+    rect_list = [one_player_button_rect, two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
 
     num_players = 0
     time_attack = False
     voice_control = False
     time_limit = INITIAL_TIME_LIMIT
 
+    # handling the mode the user chose
     while num_players == 0 and not time_attack and not voice_control:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -375,17 +394,8 @@ def main():
                     voice_control = True
 
         WINDOW.fill(WHITE)
-        # Draw buttons
-        pygame.draw.rect(WINDOW, GREEN, one_player_button_rect)
-        pygame.draw.rect(WINDOW, GREEN, two_players_button_rect)
-        pygame.draw.rect(WINDOW, GREEN, time_attack_button_rect)
-        pygame.draw.rect(WINDOW, GREEN, voice_control_button_rect)
 
-        # Draw text on buttons
-        display_text(WINDOW, "1 Player", "2 Players", FONT, {"center": (200, 175)}, {"center": (200, 275)})
-        display_text(WINDOW, "Time Attack", "", FONT, {"center": (200, 100)}, {"center": (200, 100)})
-        display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
-
+        draw_main_win_buttons(WINDOW, FONT, pygame, rect_list)
         pygame.display.update()
 
     player_turn = 1  # Player 1 starts
