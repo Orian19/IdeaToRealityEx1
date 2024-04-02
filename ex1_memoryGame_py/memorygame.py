@@ -53,6 +53,8 @@ def speech_recognition():
 
     while True:
         data = stream.read(4096)
+        if len(data) == 0:
+            break
         if recognizer.AcceptWaveform(data):
             text = recognizer.Result()
             index = json.loads(text)
@@ -60,7 +62,11 @@ def speech_recognition():
             index = text_to_index(index["text"])
 
             if isinstance(index, int):
-                return index-1
+                return index - 1
+
+    stream.stop_stream()
+    stream.close()
+    mic.terminate()
 
 
 def load_sound(file_path):
@@ -77,7 +83,8 @@ def load_sound(file_path):
         return None
 
 
-def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None, card_back=None):
+def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation=None,
+               card_back=None):
     """
     board drawing and updates for the game play
     :param WINDOW:
@@ -126,7 +133,8 @@ def draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_H
                     WINDOW.blit(card_back_scaled, (x, y))
 
 
-def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back, hint=False):
+def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, index, card_back,
+                        hint=False):
     """
     flipping card anmation for when a card is to be revealed to the player
     :param WINDOW:
@@ -145,7 +153,8 @@ def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDT
     """
     # First phase: shrinking the card to the middle
     for width in range(CARD_WIDTH, 0, -10):
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "hiding"}, card_back=card_back)
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                   flip_animation={"index": index, "width": width, "phase": "hiding"}, card_back=card_back)
         pygame.display.update()
         pygame.time.wait(25)
 
@@ -155,14 +164,16 @@ def flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDT
 
     # Second phase: expanding the card from the middle to full width
     for width in range(0, CARD_WIDTH + 1, 10):
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                   flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
         pygame.display.update()
         pygame.time.wait(25)
 
     # close card shortly after revealed if hint
     if hint:
         revealed[index] = False
-        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
+        draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                   flip_animation={"index": index, "width": width, "phase": "revealing"}, card_back=card_back)
         pygame.display.update()
         pygame.time.wait(25)
 
