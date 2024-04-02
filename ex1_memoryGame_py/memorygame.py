@@ -294,6 +294,47 @@ def get_hint(revealed, matched, num_players):
     return None
 
 
+def card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images, card_back,
+                              num_players, player_turn, match_sound, win_sound):
+    """
+    handling the process of cards selection
+    :param WINDOW:
+    :param voice_index:
+    :param row:
+    :param col:
+    :param revealed:
+    :param selected:
+    :param matched:
+    :param images:
+    :param card_back:
+    :param num_players:
+    :param player_turn:
+    :param match_sound:
+    :param win_sound:
+    :return: current player's turn
+    """
+    if voice_index:  # if in voice control mode
+        index = voice_index
+    else:  # if in "regular" clicking mode
+        index = row * COLS + col
+    if not revealed[index] and len(selected) < 2:
+        flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
+                            index, card_back)
+        revealed[index] = True
+        selected.append(index)
+        if len(selected) == 2:  # if the user selected two cards --> updating board and checking for a match
+            draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
+            pygame.display.update()
+            time.sleep(1)
+            player_turn = check_match(selected, revealed, matched, images, match_sound, win_sound,
+                                      num_players, player_turn)
+    elif len(selected) == 1 and selected[0] == index:
+        # If the same card is clicked twice, keep it revealed
+        revealed[index] = True
+
+    return player_turn
+
+
 def load_card_images(pygame):
     """
     load images for the game
@@ -420,24 +461,8 @@ def main():
                 col = x // (CARD_WIDTH + GAP)
                 row = y // (CARD_HEIGHT + GAP)
                 if col < COLS and row < ROWS or voice_index:  # Check if the click is within the grid
-                    if voice_index:
-                        index = voice_index
-                    else:
-                        index = row * COLS + col
-                    if not revealed[index] and len(selected) < 2:
-                        flip_animation_step(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
-                                            index, card_back)
-                        revealed[index] = True
-                        selected.append(index)
-                        if len(selected) == 2:
-                            draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP)
-                            pygame.display.update()
-                            time.sleep(1)
-                            player_turn = check_match(selected, revealed, matched, images, match_sound, win_sound,
-                                                      num_players, player_turn)
-                    elif len(selected) == 1 and selected[0] == index:
-                        # If the same card is clicked twice, keep it revealed
-                        revealed[index] = True
+                    player_turn = card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images,
+                                              card_back, num_players, player_turn, match_sound, win_sound)
                 elif reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
                     # Reset the game
                     revealed = [False] * (ROWS * COLS)
@@ -448,11 +473,12 @@ def main():
                     hint_index = None
                     start_time = time.time()
                     game_over = False
-                elif hints_remaining > 0:
+                    player_turn = 1
+                elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
                     # Check if the click was on the "Hint" button
                     hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
                     if hint_button_rect.collidepoint(x, y):
-                        hint_index = get_hint(revealed, matched, images, num_players)
+                        hint_index = get_hint(revealed, matched, num_players)
                         if hint_index is not None:
                             hints_remaining -= 1
                             pygame.time.set_timer(pygame.USEREVENT, 3000, True)  # Set a timer to hide the hint card
