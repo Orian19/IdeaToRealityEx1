@@ -376,7 +376,10 @@ def load_card_images(pygame):
 def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
     """
     drae the buttons which will appear on the main window of the game
+    :param WINDOW:
+    :param FONT:
     :param pygame:
+    :param rect_list:
     :return:
     """
     # Draw buttons
@@ -392,6 +395,15 @@ def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
 def game_reset(revealed, selected, matched, images, hints_remaining, hint_index, start_time, game_over, player_turn):
     """
     reset all game parameters for a new game
+    :param revealed:
+    :param selected:
+    :param matched:
+    :param images:
+    :param hints_remaining:
+    :param hint_index:
+    :param start_time:
+    :param game_over:
+    :param player_turn:
     :return:
     """
     revealed = [False] * (ROWS * COLS)
@@ -405,6 +417,52 @@ def game_reset(revealed, selected, matched, images, hints_remaining, hint_index,
     player_turn = 1  # reset player turn (for 2 player mode)
 
     return revealed, selected, matched, hints_remaining, hint_index, start_time, game_over, player_turn
+
+
+def game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining, num_players, time_attack, player_turn):
+    """
+    handling actual game mode window
+    :param WINDOW:
+    :param FONT:
+    :param timer_text:
+    :param voice_control:
+    :param hints_remaining:
+    :param num_players:
+    :param time_attack:
+    :param player_turn:
+    :return:
+    """
+    reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT,
+                                   position1={"bottomleft": (10, HEIGHT - 10)},
+                                   position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
+
+    if voice_control:
+        small_font_size = 25
+        small_font = pygame.font.Font(None, small_font_size)  # Create a new Font object for the smaller text
+
+        info_text = "Say 'number' followed by the card number (1-16)"
+        info_text_surface = small_font.render(info_text, True, BLACK)
+        info_text_rect = info_text_surface.get_rect(midbottom=(WIDTH - 196, HEIGHT - 60))
+        WINDOW.blit(info_text_surface, info_text_rect)
+
+    # Display "Hint" button
+    hint_text = f"Hints: {hints_remaining}"
+    hint_surface = FONT.render(hint_text, True, BLACK)
+    hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
+
+    if num_players == 2 or time_attack or voice_control:
+        pygame.draw.rect(WINDOW, RED, hint_rect)
+    else:
+        pygame.draw.rect(WINDOW, GREEN, hint_rect)
+    WINDOW.blit(hint_surface, hint_rect)
+
+    # Display player turn
+    player_turn_text = f"P{player_turn}"
+    player_turn_surface = FONT.render(player_turn_text, True, BLACK)
+    player_turn_rect = player_turn_surface.get_rect(midbottom=(WIDTH - 20, HEIGHT // 2))
+    WINDOW.blit(player_turn_surface, player_turn_rect)
+
+    return reset_text_rect
 
 
 def main():
@@ -530,57 +588,26 @@ def main():
         draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP,
                    flip_animation={"index": hint_index, "width": CARD_WIDTH, "phase": "hiding"}, card_back=card_back)
 
-        # draw_board(WINDOW, images, revealed, matched, ROWS, COLS, CARD_WIDTH, CARD_HEIGHT, GAP, hint_index)
-        if elapsed_time < 0:
+        # game stop conditions
+        if elapsed_time < 0:  # checking if time is over (for attack mode)
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=False)
-        elif len(matched) == len(images):
+        elif len(matched) == len(images):  # checking if all images were matched
             game_over = True
             reset_text_rect = win_screen(WINDOW, FONT, WIDTH, HEIGHT, winner=True)
             # Decrement time limit for Time Attack mode
             if time_attack:
                 time_limit -= TIME_LIMIT_DECREMENT
-                # Reset the game for the next round with reduced time limit
-                revealed = [False] * (ROWS * COLS)
-                selected = []
-                matched = []
-                random.shuffle(images)
-                hints_remaining = MAX_HINTS
-                hint_index = None
-                start_time = time.time()
-                game_over = False
-        else:
-            reset_text_rect = display_text(WINDOW, timer_text, "Reset", FONT,
-                                           position1={"bottomleft": (10, HEIGHT - 10)},
-                                           position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
-
-            if voice_control:
-                small_font_size = 25
-                small_font = pygame.font.Font(None, small_font_size)  # Create a new Font object for the smaller text
-
-                info_text = "Say 'number' followed by the card number (1-16)"
-                info_text_surface = small_font.render(info_text, True, BLACK)
-                info_text_rect = info_text_surface.get_rect(midbottom=(WIDTH - 196, HEIGHT - 60))
-                WINDOW.blit(info_text_surface, info_text_rect)
-
-            # Display "Hint" button
-            hint_text = f"Hints: {hints_remaining}"
-            hint_surface = FONT.render(hint_text, True, BLACK)
-            hint_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
-            if num_players == 2 or time_attack or voice_control:
-                pygame.draw.rect(WINDOW, RED, hint_rect)
-            else:
-                pygame.draw.rect(WINDOW, GREEN, hint_rect)
-            WINDOW.blit(hint_surface, hint_rect)
-
-            # Display player turn
-            player_turn_text = f"P{player_turn}"
-            player_turn_surface = FONT.render(player_turn_text, True, BLACK)
-            player_turn_rect = player_turn_surface.get_rect(midbottom=(WIDTH - 20, HEIGHT // 2))
-            WINDOW.blit(player_turn_surface, player_turn_rect)
+                (revealed, selected, matched, hints_remaining, hint_index,
+                 start_time, game_over, player_turn) = (
+                    game_reset(revealed, selected, matched, images, hints_remaining,
+                               hint_index, start_time, game_over, player_turn))
+        else:  # game continues
+            reset_text_rect = game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining,
+                                               num_players, time_attack, player_turn)
 
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(60)  # frame rate control
 
     pygame.quit()
 
