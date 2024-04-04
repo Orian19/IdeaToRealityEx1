@@ -312,6 +312,7 @@ def hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_b
 
     return hints_remaining
 
+
 def card_selection_processing(WINDOW, voice_index, row, col, revealed, selected, matched, images, card_back,
                               num_players, player_turn, match_sound, win_sound):
     """
@@ -466,6 +467,39 @@ def game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining, n
     return reset_text_rect, hint_rect
 
 
+def process_game_mode(WINDOW, FONT, num_players, time_attack, voice_control, buttons):
+    """
+    handling the mode the user chose
+    :param num_players:
+    :param time_attack:
+    :param voice_control:
+    :param buttons: [one_player_button_rect,two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
+    :return:
+    """
+    while num_players == 0 and not time_attack and not voice_control:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if buttons[0].collidepoint(x, y):
+                    num_players = 1
+                elif buttons[1].collidepoint(x, y):
+                    num_players = 2
+                elif buttons[2].collidepoint(x, y):
+                    time_attack = True
+                elif buttons[3].collidepoint(x, y):
+                    voice_control = True
+
+        WINDOW.fill(WHITE)
+
+        draw_main_win_buttons(WINDOW, FONT, pygame, buttons)
+        pygame.display.update()
+
+    return num_players, time_attack, voice_control
+
+
 def main():
     # Initialize Pygame
     pygame.init()
@@ -498,43 +532,11 @@ def main():
     # Load win sound
     win_sound = load_sound("win_sound.wav")
 
-    # Display window for game modes
-    one_player_button_rect = pygame.Rect(100, 150, 200, 50)
-    two_players_button_rect = pygame.Rect(100, 250, 200, 50)
-    time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
-    voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
-    rect_list = [one_player_button_rect, two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
-
     num_players = 0
     time_attack = False
     voice_control = False
     time_limit = INITIAL_TIME_LIMIT
 
-    # handling the mode the user chose
-    while num_players == 0 and not time_attack and not voice_control:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = pygame.mouse.get_pos()
-                if one_player_button_rect.collidepoint(x, y):
-                    num_players = 1
-                elif two_players_button_rect.collidepoint(x, y):
-                    num_players = 2
-                elif time_attack_button_rect.collidepoint(x, y):
-                    time_attack = True
-                elif voice_control_button_rect.collidepoint(x, y):
-                    voice_control = True
-
-        WINDOW.fill(WHITE)
-
-        draw_main_win_buttons(WINDOW, FONT, pygame, rect_list)
-        pygame.display.update()
-
-    player_turn = 1  # Player 1 starts
-
-    # Main game loop
     running = True
     game_over = False
     clock = pygame.time.Clock()
@@ -542,6 +544,18 @@ def main():
     start_time = time.time()  # Start time
     voice_index = None
     reset_text_rect = None
+
+    player_turn = 1  # Player 1 starts
+
+    # Display window for game modes
+    one_player_button_rect = pygame.Rect(100, 150, 200, 50)
+    two_players_button_rect = pygame.Rect(100, 250, 200, 50)
+    time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
+    voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
+    rect_list = [one_player_button_rect, two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
+
+    num_players, time_attack, voice_control = process_game_mode(WINDOW, FONT, num_players, time_attack, voice_control,
+                                                                rect_list)
 
     # game loop
     while running:
@@ -601,7 +615,7 @@ def main():
                                hint_index, start_time, game_over, player_turn))
         else:  # game continues
             reset_text_rect, hint_rect = game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining,
-                                               num_players, time_attack, player_turn)
+                                                          num_players, time_attack, player_turn)
 
         pygame.display.update()
         clock.tick(60)  # frame rate control
