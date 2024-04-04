@@ -294,13 +294,14 @@ def get_hint(revealed, matched, num_players):
     return None
 
 
-def hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_back, hints_remaining):
+def hint_processing(WINDOW, x, y, revealed, matched, num_players, images, card_back, hints_remaining, hint_button_rect):
     """
     handle hint processing. revealing a card for a short amount of time
     :return:
     """
     # Check if the click was on the "Hint" button
-    hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
+    # hint_button_rect = hint_surface.get_rect(topleft=(WIDTH - 210, HEIGHT - 38))
+    # hint_button_rect = pygame.Rect(WIDTH - 210, HEIGHT - 38, 80, 30)
     if hint_button_rect.collidepoint(x, y):
         hint_index = get_hint(revealed, matched, num_players)
         if hint_index is not None:
@@ -462,7 +463,7 @@ def game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining, n
     player_turn_rect = player_turn_surface.get_rect(midbottom=(WIDTH - 20, HEIGHT // 2))
     WINDOW.blit(player_turn_surface, player_turn_rect)
 
-    return reset_text_rect
+    return reset_text_rect, hint_rect
 
 
 def main():
@@ -564,7 +565,7 @@ def main():
                                    hint_index, start_time, game_over, player_turn))
                 elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
                     hints_remaining = hint_processing(WINDOW, x, y, revealed, matched, num_players,
-                                                      images, card_back, hints_remaining)
+                                                      images, card_back, hints_remaining, hint_rect)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
@@ -603,7 +604,7 @@ def main():
                     game_reset(revealed, selected, matched, images, hints_remaining,
                                hint_index, start_time, game_over, player_turn))
         else:  # game continues
-            reset_text_rect = game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining,
+            reset_text_rect, hint_rect = game_mode_window(WINDOW, FONT, timer_text, voice_control, hints_remaining,
                                                num_players, time_attack, player_turn)
 
         pygame.display.update()
