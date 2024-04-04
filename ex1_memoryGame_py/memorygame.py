@@ -393,7 +393,7 @@ def draw_main_win_buttons(WINDOW, FONT, pygame, rect_list):
     display_text(WINDOW, "Voice Control", "", FONT, {"center": (200, 50)}, {"center": (200, 50)})
 
 
-def game_reset(revealed, selected, matched, images, hints_remaining, hint_index, start_time, game_over, player_turn):
+def game_reset(images):
     """
     reset all game parameters for a new game
     :param revealed:
@@ -559,20 +559,16 @@ def main():
                                                             images,
                                                             card_back, num_players, player_turn, match_sound, win_sound)
                 elif reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
-                    (revealed, selected, matched, hints_remaining, hint_index,
-                     start_time, game_over, player_turn) = (
-                        game_reset(revealed, selected, matched, images, hints_remaining,
-                                   hint_index, start_time, game_over, player_turn))
+                    (revealed, selected, matched, hints_remaining, hint_index, start_time,
+                     game_over, player_turn) = game_reset(images)
                 elif hints_remaining > 0 and num_players == 1:  # handling hints updates (for 1 player mode)
                     hints_remaining = hint_processing(WINDOW, x, y, revealed, matched, num_players,
                                                       images, card_back, hints_remaining, hint_rect)
             elif game_over and event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_text_rect is not None and reset_text_rect.collidepoint(x, y):
-                    (revealed, selected, matched, hints_remaining, hint_index,
-                     start_time, game_over, player_turn) = (
-                        game_reset(revealed, selected, matched, images, hints_remaining,
-                                   hint_index, start_time, game_over, player_turn))
+                    (revealed, selected, matched, hints_remaining, hint_index, start_time,
+                     game_over, player_turn) = game_reset(images)
             elif event.type == pygame.USEREVENT:
                 # Timer event to hide the hint card
                 hint_index = None
