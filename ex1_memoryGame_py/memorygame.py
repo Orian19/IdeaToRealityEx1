@@ -9,7 +9,9 @@ import json
 # Define colors
 WHITE = (255, 255, 255)
 GREEN = (144, 238, 144)
+DARK_GREEN = (50, 205, 50)
 BLUE = (0, 0, 255)
+LIGHT_BLUE = (173, 216, 230)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
@@ -373,7 +375,7 @@ class MemoryGame:
         """
         # Draw buttons
         for rect in self.rect_list:
-            pygame.draw.rect(self.WINDOW, GREEN, rect)
+            pygame.draw.rect(self.WINDOW, DARK_GREEN, rect)
 
         # Draw text on buttons
         self.display_text(self.WINDOW, "1 Player", "2 Players", self.FONT, {"center": (200, 175)},
@@ -464,7 +466,7 @@ class MemoryGame:
 
             self.start_time = time.time()  # Start time
 
-            self.WINDOW.fill(WHITE)
+            self.WINDOW.fill(LIGHT_BLUE)
             self.draw_main_win_buttons()
             pygame.display.update()
 
