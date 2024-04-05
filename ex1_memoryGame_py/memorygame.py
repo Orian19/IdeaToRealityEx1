@@ -9,6 +9,7 @@ import json
 # Define colors
 WHITE = (255, 255, 255)
 GREEN = (144, 238, 144)
+BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
@@ -36,7 +37,7 @@ class MemoryGame:
         pygame.display.set_caption("Memory Game")
 
         # Load images
-        self.images, self.card_back = self.load_card_images()  # TODO: should be methods from now on
+        self.images, self.card_back = self.load_card_images()
         # Duplicate images to create pairs
         self.images *= 2
         # Shuffle images
@@ -66,12 +67,21 @@ class MemoryGame:
         self.game_over = False
         self.clock = pygame.time.Clock()
 
-        self.start_time = time.time()  # Start time
+        self.start_time = None  # Start time
+        self.elapsed_time = None
         self.voice_index = None
+        self.menu_rect = None
         self.reset_text_rect = None
         self.hint_rect = None
 
         self.player_turn = 1  # Player 1 starts
+
+        # Display window for game modes
+        one_player_button_rect = pygame.Rect(100, 150, 200, 50)
+        two_players_button_rect = pygame.Rect(100, 250, 200, 50)
+        time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
+        voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
+        self.rect_list = [one_player_button_rect, two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
 
     @staticmethod
     def text_to_index(text):
@@ -81,7 +91,7 @@ class MemoryGame:
         :return:
         """
         num_dict = {
-            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+            "one": 0, "two": 2, "three": 3, "four": 4, "five": 5,
             "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
             "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
             "sixteen": 16
@@ -315,7 +325,10 @@ class MemoryGame:
         :return: current player's turn
         """
         if self.voice_index:  # if in voice control mode
-            index = self.voice_index
+            if self.voice_index == -1:
+                index = 0
+            else:
+                index = self.voice_index
         else:  # if in "regular" clicking mode
             index = row * COLS + col
         if not self.revealed[index] and len(self.selected) < 2:
@@ -353,14 +366,13 @@ class MemoryGame:
 
         return images, card_back
 
-    def draw_main_win_buttons(self, rect_list):
+    def draw_main_win_buttons(self):
         """
         drae the buttons which will appear on the main window of the game
-        :param rect_list:
         :return:
         """
         # Draw buttons
-        for rect in rect_list:
+        for rect in self.rect_list:
             pygame.draw.rect(self.WINDOW, GREEN, rect)
 
         # Draw text on buttons
@@ -381,7 +393,9 @@ class MemoryGame:
         self.hints_remaining = MAX_HINTS  # reset hints
         self.hint_index = None
         self.start_time = time.time()  # reset time
+        self.elapsed_time = None
         self.game_over = False
+        self.voice_index = None
         self.player_turn = 1  # reset player turn (for 2 player mode)
 
     def game_mode_window(self, timer_text):
@@ -393,13 +407,18 @@ class MemoryGame:
                                                  position1={"bottomleft": (10, HEIGHT - 10)},
                                                  position2={"bottomright": (WIDTH - 10, HEIGHT - 10)})
 
+        menu_surface = self.FONT.render("Menu", True, BLUE)
+        self.menu_rect = menu_surface.get_rect(topleft=(WIDTH - 85, HEIGHT - 65))
+        pygame.draw.rect(self.WINDOW, WHITE, self.menu_rect)
+        self.WINDOW.blit(menu_surface, self.menu_rect)
+
         if self.voice_control:
             small_font_size = 25
             small_font = pygame.font.Font(None, small_font_size)  # Create a new Font object for the smaller text
 
             info_text = "Say 'number' followed by the card number (1-16)"
             info_text_surface = small_font.render(info_text, True, BLACK)
-            info_text_rect = info_text_surface.get_rect(midbottom=(WIDTH - 196, HEIGHT - 60))
+            info_text_rect = info_text_surface.get_rect(midbottom=(WIDTH - 196, HEIGHT - 75))
             self.WINDOW.blit(info_text_surface, info_text_rect)
 
         # Display "Hint" button
@@ -415,35 +434,38 @@ class MemoryGame:
 
         # Display player turn
         player_turn_text = f"P{self.player_turn}"
-        player_turn_surface = self.FONT.render(player_turn_text, True, BLACK)
+        player_turn_surface = self.FONT.render(player_turn_text, True, BLUE)
         player_turn_rect = player_turn_surface.get_rect(midbottom=(WIDTH - 20, HEIGHT // 2))
         self.WINDOW.blit(player_turn_surface, player_turn_rect)
 
-    def process_game_mode(self, buttons):
+    def process_game_mode(self):
         """
         handling the mode the user chose
-        :param buttons: [one_player_button_rect,two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
         :return:
         """
-        while self.num_players == 0 and not self.time_attack and not self.voice_control:
+        self.num_players = 0
+        self.time_attack = False
+        self.voice_control = False
+        while self.num_players == 0 and (not self.time_attack and not self.voice_control):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = pygame.mouse.get_pos()
-                    if buttons[0].collidepoint(x, y):
+                    if self.rect_list[0].collidepoint(x, y):
                         self.num_players = 1
-                    elif buttons[1].collidepoint(x, y):
+                    elif self.rect_list[1].collidepoint(x, y):
                         self.num_players = 2
-                    elif buttons[2].collidepoint(x, y):
+                    elif self.rect_list[2].collidepoint(x, y):
                         self.time_attack = True
-                    elif buttons[3].collidepoint(x, y):
+                    elif self.rect_list[3].collidepoint(x, y):
                         self.voice_control = True
 
-            self.WINDOW.fill(WHITE)
+            self.start_time = time.time()  # Start time
 
-            self.draw_main_win_buttons(buttons)
+            self.WINDOW.fill(WHITE)
+            self.draw_main_win_buttons()
             pygame.display.update()
 
     def game_loop(self):
@@ -459,6 +481,9 @@ class MemoryGame:
                     row = y // (CARD_HEIGHT + GAP)
                     if col < COLS and row < ROWS or self.voice_index:  # Check if the click is within the grid
                         self.card_selection_processing(row, col)
+                    elif self.menu_rect.collidepoint(x, y):  # go back to the modes window
+                        self.game_reset()
+                        self.process_game_mode()
                     elif self.reset_text_rect is not None and self.reset_text_rect.collidepoint(x, y):
                         self.game_reset()
                     elif self.hints_remaining > 0 and self.num_players == 1:  # handling hints updates (for 1 player mode)
@@ -506,14 +531,8 @@ def main():
     # create game
     game = MemoryGame()
 
-    # Display window for game modes
-    one_player_button_rect = pygame.Rect(100, 150, 200, 50)
-    two_players_button_rect = pygame.Rect(100, 250, 200, 50)
-    time_attack_button_rect = pygame.Rect(100, 75, 200, 50)
-    voice_control_button_rect = pygame.Rect(100, 20, 200, 50)
-    rect_list = [one_player_button_rect, two_players_button_rect, time_attack_button_rect, voice_control_button_rect]
-
-    game.process_game_mode(rect_list)
+    # game mode
+    game.process_game_mode()
 
     # game loop
     game.game_loop()
